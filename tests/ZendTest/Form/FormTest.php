@@ -1739,6 +1739,8 @@ class FormTest extends TestCase
                         'name' => 'name',
                         'type' => 'Zend\Form\Element\Text',
                     ),
+                ),
+                array(
                     'spec' => array(
                         'name' => 'groups',
                         'type' => 'Zend\Form\Element\Collection',
@@ -1865,9 +1867,168 @@ class FormTest extends TestCase
         );
 
         $this->form->setData($data);
-
+        
         $isValid = $this->form->isValid();
         $this->assertEquals($data, $this->form->getData());
+    }
+    
+     public function testFormPrepareWithNestedCollections()
+    {
+        
+         
+        $spec = array(
+            'name' => 'test',
+            'elements' => array(
+                array(
+                    'spec' => array(
+                        'name' => 'name',
+                        'type' => 'Zend\Form\Element\Text',
+                    ),
+                ), array(
+                    'spec' => array(
+                        'name' => 'groups',
+                        'type' => 'Zend\Form\Element\Collection',
+                        'options' => array(
+                            'count'=>0,
+                            'should_create_template'=>true,
+                            'target_element' => array(
+                                'type' => 'Zend\Form\Fieldset',
+                                'name' => 'group',
+                                'elements' => array(
+                                    array(
+                                        'spec' => array(
+                                            'type' => 'Zend\Form\Element\Text',
+                                            'name' => 'group_class',
+                                        ),
+                                    ),
+                                    array(
+                                        'spec' => array(
+                                            'type' => 'Zend\Form\Element\Collection',
+                                            'name' => 'items',
+                                            'options' => array(
+                                                'count'=>0,
+                                                'should_create_template'=>true,
+                                                'target_element' => array(
+                                                    'type' => 'Zend\Form\Fieldset',
+                                                    'name' => 'item',
+                                                    'elements' => array(
+                                                        array(
+                                                            'spec' => array(
+                                                                'type' => 'Zend\Form\Element\Text',
+                                                                'name' => 'id',
+                                                            ),
+                                                        ),
+                                                        array(
+                                                            'spec' => array(
+                                                                'type' => 'Zend\Form\Element\Text',
+                                                                'name' => 'type',
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    )
+                )
+            )
+        );
+        
+        $factory = new Factory();
+        $this->form = $factory->createForm($spec);
+        
+        $data = array(
+            'name' => 'foo',
+            'groups' => array(
+                array(
+                    'group_class' => 'bar',
+                    'items' => array(
+                        array(
+                            'id' => 100,
+                            'type' => 'item-1',
+                        ),
+                    ),
+                ),
+                array(
+                    'group_class' => 'bar',
+                    'items' => array(
+                        array(
+                            'id' => 200,
+                            'type' => 'item-2',
+                        ),
+                        array(
+                            'id' => 300,
+                            'type' => 'item-3',
+                        ),
+                        array(
+                            'id' => 400,
+                            'type' => 'item-4',
+                        ),
+                    ),
+                ),
+                array(
+                    'group_class' => 'biz',
+                    'items' => array(),
+                ),
+            ),
+        );
+
+        $this->form->setData($data);
+        
+        $this->form->prepare();
+        
+        $this->assertEquals('name', $this->form->get('name')->getName());
+        
+        $groupsCollection = $this->form->get('groups');
+        $this->assertEquals('groups', $this->form->get('groups')->getName());
+        
+        $groupsCollectionTemplateElement = $groupsCollection->getTemplateElement();
+        $this->assertEquals('groups[__index__][group_class]', $groupsCollectionTemplateElement->get('group_class')->getName());
+        $groupsCollectionTemplateElementItemsCollection = $groupsCollectionTemplateElement->get('items');
+        $this->assertEquals('groups[__index__][items]', $groupsCollectionTemplateElementItemsCollection->getName());
+        $groupsCollectionTemplateElementItemsCollectionTemplateElement = $groupsCollectionTemplateElementItemsCollection->getTemplateElement();
+        $this->assertEquals('groups[__index__][items][__index__]', $groupsCollectionTemplateElementItemsCollectionTemplateElement->getName());
+        $this->assertEquals('groups[__index__][items][__index__][id]', $groupsCollectionTemplateElementItemsCollectionTemplateElement->get('id')->getName());
+        
+        $groupsFirstFieldset = $groupsCollection->get('0');
+        $this->assertEquals('groups[0]', $groupsFirstFieldset->getName());
+        
+        $groupsFirstFieldsGroupClassElement = $groupsFirstFieldset->get('group_class'); 
+        $this->assertEquals('groups[0][group_class]', $groupsFirstFieldsGroupClassElement->getName());
+        
+        $groupsFirstFieldsItemsCollection = $groupsFirstFieldset->get('items');
+        $this->assertEquals('groups[0][items]', $groupsFirstFieldsItemsCollection->getName());
+        
+        
+        $groupsFirstFieldsItemsCollectionTemplateElement = $groupsFirstFieldsItemsCollection->getTemplateElement();
+        $this->assertEquals('groups[0][items][__index__]', $groupsFirstFieldsItemsCollectionTemplateElement->getName());
+        
+        $this->assertEquals('groups[0][items][__index__][id]', $groupsFirstFieldsItemsCollectionTemplateElement->get('id')->getName());
+        $groupsFirstFieldsItemsCollectionFirstFieldset = $groupsFirstFieldsItemsCollection->get('0');
+        
+        $this->assertEquals('groups[0][items][0]', $groupsFirstFieldsItemsCollectionFirstFieldset->getName());
+        
+        $groupsFirstFieldsItemsCollectionFirstFieldsetIdElement = $groupsFirstFieldsItemsCollectionFirstFieldset->get('id');
+        $this->assertEquals('groups[0][items][0][id]', $groupsFirstFieldsItemsCollectionFirstFieldsetIdElement->getName());
+        
+        
+        $groupsSecondFieldset = $groupsCollection->get('1');
+        $this->assertEquals('groups[1]', $groupsSecondFieldset->getName());
+        
+        $groupsSecondFieldsGroupClassElement = $groupsSecondFieldset->get('group_class'); 
+        $this->assertEquals('groups[1][group_class]', $groupsSecondFieldsGroupClassElement->getName());
+        
+        $groupsSecondFieldsItemsCollection = $groupsSecondFieldset->get('items');
+        $this->assertEquals('groups[1][items]', $groupsSecondFieldsItemsCollection->getName());
+        
+        $groupsSecondFieldsItemsCollectionTemplateElement = $groupsSecondFieldsItemsCollection->getTemplateElement();
+        $this->assertEquals('groups[1][items][__index__]', $groupsSecondFieldsItemsCollectionTemplateElement->getName());
+        
+        echo $groupsSecondFieldsItemsCollectionTemplateElement->get('id')->getName(); exit;
+        
     }
 
     public function testFormElementValidatorsMergeIntoAppliedInputFilter()
