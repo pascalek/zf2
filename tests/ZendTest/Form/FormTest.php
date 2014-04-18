@@ -1934,7 +1934,45 @@ class FormTest extends TestCase
                         ),
                     )
                 )
-            )
+            ),
+            'input_filter' => array(
+                'type' => 'Zend\InputFilter\InputFilter',
+                'name' => array(
+                    'filters' => array(
+                        array('name' => 'StringTrim'),
+                        array('name' => 'Null'),
+                    ),
+                    'validators' => array(
+                        array(
+                            'name' => 'StringLength',
+                            'options' => array(
+                                'max' => 255,
+                            ),
+                        ),
+                    ),
+                ),
+                'groups' => array(
+                    'type' => 'Zend\InputFilter\CollectionInputFilter',
+                    'input_filter' => array(
+                        'type' => 'Zend\InputFilter\InputFilter',
+                        'group_class' => array(
+                            'required' => false,
+                        ),
+                        'items' => array(
+                            'type' => 'Zend\InputFilter\CollectionInputFilter',
+                            'input_filter' => array(
+                                'type' => 'Zend\InputFilter\InputFilter',
+                                'id' => array(
+                                    'required' => false,
+                                ),
+                                'type' => array(
+                                    'required' => false,
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         );
         
         $factory = new Factory();
